@@ -1,7 +1,7 @@
 from django.db import models
 
 class Event(models.Model):
-    game = models.ForeignKey("Game", on_delete=models.CASCADE)
+    game = models.ForeignKey("Game", on_delete=models.CASCADE, related_name='events')
     # q for text, date, and time field options
     description = models.TextField()
     date = models.DateField()
