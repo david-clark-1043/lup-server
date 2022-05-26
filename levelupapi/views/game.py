@@ -1,6 +1,9 @@
 """View module for handling requests about games"""
 from django.http import HttpResponseServerError
 from django.core.exceptions import ValidationError
+from rest_framework import permissions
+
+# from rest_framework.permissions import DjangoModelPermissions
 
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
@@ -8,8 +11,26 @@ from rest_framework import serializers, status
 from levelupapi.models import Game, Gamer, GameType
 from django.db.models import Count, Q
 
+class EditGamePermission(permissions.BasePermission):
+    """
+    Object-level permission to only allow owners of an object to edit it.
+    Assumes the model instance has an `owner` attribute.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        # Read permissions are allowed to any request,
+        # so we'll always allow GET, HEAD or OPTIONS requests.
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Instance must have an attribute named `owner`.
+        return obj.gamer.id == request.user.id
+
 class GameView(ViewSet):
     """Level up games view"""
+
+    permission_classes = [ EditGamePermission ]
+    queryset = Game.objects.none()
 
     def retrieve(self, request, pk):
         """Handle GET requests for single game
@@ -73,6 +94,7 @@ class GameView(ViewSet):
     
     def destroy(self, request, pk):
         game = Game.objects.get(pk=pk)
+        self.check_object_permissions(request, game)
         game.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
         
@@ -92,7 +114,6 @@ class GameSerializer(serializers.ModelSerializer):
         depth = 1
 
 class CreateGameSerializer(serializers.ModelSerializer):
-    
     
     class Meta:
         model = Game
